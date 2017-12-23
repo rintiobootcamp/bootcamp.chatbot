@@ -1,0 +1,518 @@
+<html>
+
+<head>
+    <title>API Example</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript">
+
+        //Token client et Url permettant de se connecter à DialogFlow
+        var accessToken = "4d42ae522a434e15b001e460640e4058";
+        var baseUrl = "https://api.api.ai/v1/";
+		
+		//url des services
+		var baseUrlProjet = "http://104.131.60.151/projet/";
+		var baseUrlCategorie = "http://104.131.60.151/categorie/";
+		
+        $(document).ready(function () {
+            $("#input").keypress(function (event) {
+                if (event.which == 13) {
+                    event.preventDefault();
+                    send();
+                }
+            });
+            $("#rec").click(function (event) {
+                switchRecognition();
+            });
+        });
+        var recognition;
+        function startRecognition() {
+            recognition = new webkitSpeechRecognition();
+            recognition.onstart = function (event) {
+                updateRec();
+            };
+            recognition.onresult = function (event) {
+                var text = "";
+                for (var i = event.resultIndex; i < event.results.length; ++i) {
+                    text += event.results[i][0].transcript;
+                }
+                setInput(text);
+                stopRecognition();
+            };
+            recognition.onend = function () {
+                stopRecognition();
+            };
+            recognition.lang = "fr-FR";
+            recognition.start();
+        }
+
+        function stopRecognition() {
+            if (recognition) {
+                recognition.stop();
+                recognition = null;
+            }
+            updateRec();
+        }
+        function switchRecognition() {
+            if (recognition) {
+                stopRecognition();
+            } else {
+                startRecognition();
+            }
+        }
+        function setInput(text) {
+            $("#input").val(text);
+            send();
+        }
+        function updateRec() {
+            $("#rec").text(recognition ? "Stop" : "Speak");
+        }
+        function send() {
+            var text = $("#input").val();
+			console.log(text);
+            $.ajax({
+                type: "POST",
+                url: baseUrl + "query?v=20150910",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                headers: {
+                    "Authorization": "Bearer " + accessToken
+                },
+                data: JSON.stringify({ query: text, lang: "fr", sessionId: "somerandomthing" }),
+                success: function (data) {
+                    var respText = data.result.fulfillment.speech;
+                    console.log("Respuesta: " + respText);
+                    
+                    //listes des Entitées
+					if (respText == "x20lp17") {
+                        respText="";
+						var paramt = "";
+						RequestGETListProjets(paramt);
+                        //console.log("ca marche " );
+					}
+                    if (respText == "x20ls17") {
+                        respText="";
+                        var paramt = "";
+                        RequestGETListSecteurs(paramt);
+                    }
+                    if (respText == "x20la17") {
+                        respText="";
+                        var paramt = " ";
+                        RequestGETListAxes(paramt);
+                    }
+                    if (respText == "x20lpi17") {
+                        respText="";
+                        var paramt = " ";
+                        RequestGETListPiliers(paramt);
+                    }
+
+                    // count les occurences d'entitées
+                    if(respText == "x20np17/null"){
+                        respText="";
+                        ent = "projets";
+                        urlpath = baseUrlProjet;
+                        RequestGETListCount(ent, urlpath);
+                    }
+                    if(respText == "x20ns17"){
+                        respText="";
+                        ent = "secteurs";
+                        urlpath = baseUrlCategorie;
+                        RequestGETListCount(ent, urlpath);
+                    }
+                    if(respText == "x20na17"){
+                        respText="";
+                        ent = "axes";
+                        urlpath = baseUrlCategorie;
+                        RequestGETListCount(ent, urlpath);
+                    }
+                    if(respText == "x20npi17"){
+                        respText="";
+                        ent = "piliers";
+                        urlpath = baseUrlCategorie;
+                        RequestGETListCount(ent, urlpath);
+                    }
+
+                    //
+                    if (respText == "x20lp17oui") {
+                        respText="";
+                        paramm = "Choisissez dans la liste suivante le numéro correspond au projet recherché.";
+                        RequestGETListProjets(paramm);
+                    }
+                    if (respText == "x20lpi17oui") {
+                        respText="";
+                        paramm = "Faites un choix dans la liste suivante";
+                        RequestGETListPiliers(paramm);
+                    }
+                    if (respText == "x20la17oui") {
+                        respText="";
+                        paramm = "Faites un choix pour avoir plus de détails";
+                        RequestGETListAxes(paramm);
+                    }
+                    if (respText == "x20ls17oui") {
+                        respText="";
+                        paramm = "Quel secteur vous intéresse ?";
+                        RequestGETListSecteurs(paramm);
+                    }
+
+                    //description entité
+                    if (respText == "x20ps17oui") {
+                        respText="";
+                        paramm = data.result.parameters.number;
+                        RequestGETProjetById(paramm);
+                        //console.log("tu :"+paramm);
+                    }
+                    if (respText == "x20ss17oui") {
+                        respText="";
+                        paramm = data.result.parameters.number;
+                        //console.log("tu :"+paramm);
+                        RequestGETSecteurById(paramm);
+                    }
+                    if (respText == "x20as17oui") {
+                        respText="";
+                        paramm = data.result.parameters.number;
+                        //console.log("tu :"+paramm);
+                        RequestGETAxeById(paramm);
+                    }
+                    if (respText == "x20pis17oui") {
+                        respText="";
+                        paramm = data.result.parameters.number;
+                        //console.log("tu :"+paramm);
+                        RequestGETPilierById(paramm);
+                    }
+
+                    if (respText == "x20fp17") {
+                        respText="";
+                        var paramt = "Sélectionnez le projet dont vous désirez avoir le financement.";
+                        RequestGETListProjets(paramt);
+                        //console.log("ca marche " );
+                    }
+                    
+
+					
+                    setResponse(respText);
+					console.log("requete envoyé");
+					
+                },
+                error: function () {
+                    setResponse("Internal Server Error");
+                }
+            });
+            setResponse("Loading...");
+        }
+        //personal code start
+		function RequestGETProjetById(projetId) {
+			//var projetId = 2;
+            $.ajax({
+                type: "GET",
+                url: baseUrlProjet+"projets/"+projetId,
+                dataType: "json",
+                success: function (dataservice) {
+					//var reponseService = dataservice.description;
+
+					//if (dataservice.length > 0){
+
+					   //var reponseService;// = dataservice.description;
+					   reponseService = dataservice.nom+'\n\n'+
+                       "Description : "+dataservice.description+'\n'+
+                       "Budget alloué : "+dataservice.coutReel+'\n'+
+                       "Contribution de l'Etat : "+dataservice.financementPublic+" FCFA"+'\n'+
+                       "Contribution du Privé : "+dataservice.financementPrive+" FCFA"+'\n'+
+                       "Région à impacter : ";
+
+                       for (var i = 0; i < dataservice.regions.length; i++){
+                            var region = ('- ') + dataservice.regions.nom[i] +'\n';
+                        }
+                        //console.log("region : "+region);
+                       //"Région à impacter : "+dataservice.regions.nom+'\n';
+
+                       //reponseService = dataservice.nom;
+						setResponse(reponseService)
+					//}
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+		
+		function RequestGETSecteurById(secteurId) {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"secteurs/"+secteurId,
+                dataType: "json",
+                success: function (dataservice) {
+					var reponseService;
+
+                       var reponseService;// = dataservice.description;
+                       reponseService = dataservice.nom+'\n'+
+                       "Description : "+dataservice.description;
+
+                        setResponse(reponseService);
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        function RequestGETAxeById(axeId) {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"axes/"+axeId,
+                dataType: "json",
+                success: function (dataservice) {
+                    var reponseService;
+
+                       var reponseService;// = dataservice.description;
+                       reponseService = dataservice.nom+'\n'+
+                       "Description : "+dataservice.description;
+
+                        setResponse(reponseService);
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        function RequestGETPilierById(pilierId) {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"piliers/"+pilierId,
+                dataType: "json",
+                success: function (dataservice) {
+                    var reponseService;
+
+                    if (dataservice.length > 0){
+
+                       var reponseService;// = dataservice.description;
+                       reponseService = dataservice.nom+'\n'+
+                       "Description : "+dataservice.description;
+
+                        setResponse(reponseService);
+                    }
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+		
+        function RequestGETListProjets(param) {
+            $.ajax({
+                type: "GET",
+                url: baseUrlProjet+"projets",
+                dataType: "json",
+                success: function (dataservice) {
+					if (dataservice.length > 0){
+						var reponseService ="";
+						for (var i = 0; i < dataservice.length; i++){
+							reponseService += (i+1) +('- ') + dataservice[i].description+'\n\n';
+						}
+						//var reponseService = dataservice.description;
+						setResponse(param + "\n\n" +reponseService)
+					}
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });	
+        }
+		
+		function RequestGETListSecteurs(param) {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"secteurs",
+                dataType: "json",
+                success: function (dataservice) {
+					if (dataservice.length > 0){
+						var reponseService = "";
+						for (var i = 0; i < dataservice.length; i++){
+							reponseService += (i+1) +('- ') + dataservice[i].nom+'\n\n';
+							//reponseService = reponseService.split("\n\n");
+						}
+						//var reponseService = dataservice.description;
+						setResponse(param + "\n\n" +reponseService)
+					}
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        function RequestGETListAxes(param) {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"axes",
+                dataType: "json",
+                success: function (dataservice) {
+                    if (dataservice.length > 0){
+                        var reponseService = ""
+                        for (var i = 0; i < dataservice.length; i++){
+                            reponseService += (i+1) +('- ') + dataservice[i].description+'\n\n';
+                            //reponseService = reponseService.split("\n\n");
+                        }
+                        setResponse(param + "\n\n" +reponseService)
+                    }
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        function RequestGETListPiliers(param) {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"piliers",
+                dataType: "json",
+                success: function (dataservice) {
+                    if (dataservice.length > 0){
+                        var reponseService = ""
+                        for (var i = 0; i < dataservice.length; i++){
+                            reponseService += (i+1) +('- ') + dataservice[i].description+'\n\n';
+                        }
+                        setResponse(param + "\n\n" +reponseService)
+                    }
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        function RequestGETListCount(entit, urlp) {
+            $.ajax({
+                type: "GET",
+                url: urlp+entit,
+                dataType: "json",
+                success: function (dataservice) {
+                    if (dataservice.length > 0){
+                        var respText = dataservice.length;
+                        var reponseService = "Le Programme d'Actions du Gouvernement est composé de "+respText+" "+entit;
+                        setResponse(reponseService);
+                    }
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+		
+        //à enlever
+        function RequestGETListPiliersCount() {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"piliers",
+                dataType: "json",
+                success: function (dataservice) {
+                    if (dataservice.length > 0){
+                        var respText = dataservice.length;
+                        var reponseService = "Le Programme d'Actions du Gouvernement repose sur "+respText+" piliers";
+                        setResponse(reponseService);
+                    }
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+		
+        function RequestGETListAxesCount() {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"axes",
+                dataType: "json",
+                success: function (dataservice) {
+                    if (dataservice.length > 0){
+                        var respText = dataservice.length;
+                        var reponseService = "Le Programme d'Actions du Gouvernement comprend "+respText+" axes";
+                        setResponse(reponseService);
+                    }
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+        
+        function RequestGETListSecteursCount() {
+            $.ajax({
+                type: "GET",
+                url: baseUrlCategorie+"secteurs",
+                dataType: "json",
+                success: function (dataservice) {
+                    if (dataservice.length > 0){
+                        var respText = dataservice.length;
+                        var reponseService = "Le Programme d'Actions du Gouvernement est composé de "+respText+" secteurs"
+                        //for (var i = 0; i < dataservice.length; i++){
+                            //reponseService += (i+1) +('- ') + dataservice[i].description+'\n\n';
+                            //reponseService = reponseService.split("\n\n");
+                        //}
+                        setResponse(reponseService);
+                    }
+
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            });
+        }
+
+
+        //personnal code end
+		
+        function setResponse(val) {
+            $("#response").val(val);
+        }
+    </script>
+
+    <style type="text/css">
+        body {
+            width: 500px;
+            margin: 0 auto;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        div {
+            position: absolute;
+        }
+
+        input {
+            width: 400px;
+        }
+
+        button {
+            width: 50px;
+        }
+
+        textarea {
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <input id="input" type="text">
+        <button id="rec">Speak</button>
+        <br>Response
+        <br>
+        <textarea id="response" cols="40" rows="20"></textarea>
+    </div>
+</body>
+
+</html>
